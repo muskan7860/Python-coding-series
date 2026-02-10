@@ -1,0 +1,55 @@
+import psutil
+
+def check_cpu_threshold():
+    cpu_threshold = int(input("Enter the cpu threshold: "))
+    current_cpu = psutil.cpu_percent(interval=1)
+    print("current Cpu %:", current_cpu)
+    if current_cpu > cpu_threshold:
+        print("CPU Alert mail sent")
+    else:
+        print("CPU in safe state")
+
+
+def check_memory_threshold():
+    memory_threshold = int(input("Enter the memory threshold: "))
+    current_memory = psutil.virtual_memory()   # ✅ fixed
+    used_memory_percent = current_memory.percent
+    print(f"current memory usage: {used_memory_percent}%")
+    if used_memory_percent > memory_threshold:
+        print("Memory Alert: High usage")
+    else:
+        print("memory is in safe state")
+
+
+def check_disk_usage():
+    disk_threshold = int(input("Enter the disk threshold value: "))
+    disk_usage = psutil.disk_usage('C:\\')     # ✅ Windows fix
+    current_disk_usage = disk_usage.percent
+    print(f"Current Disk usage: {current_disk_usage}%")
+    if current_disk_usage > disk_threshold:
+        print("Disk Alert: High usage")
+    else:
+        print("Disk is in safe state")
+
+
+choice = 0
+while choice != 4:
+    choice = int(input(
+        "\nWhich info do you want:\n"
+        "1. CPU\n"
+        "2. Memory\n"
+        "3. Disk\n"
+        "4. Exit\n"
+        "Enter your choice: "
+    ))
+
+    if choice == 1:
+        check_cpu_threshold()
+    elif choice == 2:
+        check_memory_threshold()
+    elif choice == 3:
+        check_disk_usage()
+    elif choice == 4:
+        print("Program terminated")
+    else:
+        print("Invalid choice")
