@@ -1,0 +1,279 @@
+
+
+This project implements a real-world, production-safe monitoring system using:
+
+Python for metrics collection
+
+Ansible for multi-server orchestration
+
+SSH key-based authentication
+
+JSON outputs for observability pipelines
+
+The system collects CPU, Memory, and Disk usage from multiple Ubuntu EC2 instances and stores results centrally.
+
+🎯 Why This Is Interview-Grade
+
+This project demonstrates:
+
+Real Ansible control-node setup
+
+SSH troubleshooting (most common production failure)
+
+OS-level Python restrictions (PEP 668)
+
+Correct Ansible YAML structure
+
+Production-safe dependency management
+
+Debugging mindset (not copy-paste automation)
+
+🏗️ Architecture
+Local Laptop
+   |
+   | (SCP private key)
+   v
+Ansible Control Node (EC2)
+   |
+   | (SSH via key)
+   v
+Target Ubuntu EC2 Servers
+
+📁 Repository Structure
+ansible-monitoring/
+├── inventory.ini
+├── playbook.yml
+├── monitor.py
+├── output/
+│   └── server1.json
+└── README.md
+
+🛠️ Prerequisites
+Control Node
+
+Ubuntu EC2
+
+Python 3
+
+Internet access
+
+Target Nodes
+
+Ubuntu EC2
+
+SSH enabled
+
+🚀 Setup (From Zero)
+STEP 1️⃣ — Install Ansible (Correct Way)
+pip3 install --user ansible
+echo 'export PATH=$PATH:$HOME/.local/bin' >> ~/.bashrc
+source ~/.bashrc
+
+
+Verify:
+
+ansible --version
+
+
+🔎 Why pip and not apt?
+Minimal Ubuntu images often don’t ship Ansible in default repos.
+
+🔑 STEP 2️⃣ — SSH Key Handling (MOST IMPORTANT)
+❌ ERROR ENCOUNTERED
+UNREACHABLE! no such identity: /home/ubuntu/.ssh/shell_script_key.pem
+Permission denied (publickey)
+
+🔍 ROOT CAUSE
+
+Private key existed only on local laptop
+
+Ansible runs SSH from the control node
+
+Control node had no private key
+
+✅ SOLUTION (Exact Steps)
+From local laptop (Git Bash):
+scp -i /c/Users/Muskan/Downloads/shell_script_key.pem \
+/c/Users/Muskan/Downloads/shell_script_key.pem \
+ubuntu@<CONTROL_NODE_IP>:/home/ubuntu/.ssh/
+
+On control node:
+chmod 400 /home/ubuntu/.ssh/shell_script_key.pem
+ls -l /home/ubuntu/.ssh/
+
+
+Expected:
+
+shell_script_key.pem
+authorized_keys
+known_hosts
+
+Manual SSH validation (MANDATORY):
+ssh -i /home/ubuntu/.ssh/shell_script_key.pem ubuntu@<TARGET_IP>
+
+
+🧠 Interview lesson
+
+Always validate SSH manually before blaming Ansible.
+
+📄 STEP 3️⃣ — Inventory Configuration
+inventory.ini
+[linux_servers]
+server1 ansible_host=<TARGET_IP>
+
+[linux_servers:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/home/ubuntu/.ssh/shell_script_key.pem
+ansible_python_interpreter=/usr/bin/python3
+
+❌ ERROR ENCOUNTERED
+ansible_python_interprete
+
+✅ FIX
+
+Correct spelling:
+
+ansible_python_interpreter
+
+
+🧠 Interview lesson
+
+Inventory typos silently break Ansible.
+
+🧪 STEP 4️⃣ — Connectivity Test
+ansible -i inventory.ini linux_servers -m ping
+
+
+Expected:
+
+server1 | SUCCESS => pong
+
+🐍 STEP 5️⃣ — Python Monitoring Script
+monitor.py
+import psutil
+import json
+import socket
+from datetime import datetime
+
+def collect_metrics():
+    return {
+        "host": socket.gethostname(),
+        "timestamp": datetime.utcnow().isoformat(),
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_percent": psutil.virtual_memory().percent,
+        "disk_percent": psutil.disk_usage('/').percent
+    }
+
+if __name__ == "__main__":
+    print(json.dumps(collect_metrics()))
+
+❌ ERROR ENCOUNTERED
+if __main__ == "__main__":
+
+✅ FIX
+if __name__ == "__main__":
+
+
+🧠 Interview lesson
+
+Python entry-point mistakes prevent script execution.
+
+📜 STEP 6️⃣ — Ansible Playbook
+❌ ERROR ENCOUNTERED
+externally-managed-environment (PEP 668)
+
+🔍 ROOT CAUSE
+
+Ubuntu 22.04+ blocks system-wide pip install to protect OS Python.
+
+❌ WRONG APPROACH
+pip:
+  name: psutil
+
+✅ CORRECT SOLUTION (Production-Safe)
+
+Use OS packages.
+
+✅ Final playbook.yml
+- name: Monitor Ubuntu EC2 servers
+  hosts: linux_servers
+  become: yes
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - python3
+          - python3-psutil
+        state: present
+        update_cache: yes
+
+    - name: Copy monitoring script
+      copy:
+        src: monitor.py
+        dest: /home/ubuntu/monitor.py
+        mode: '0755'
+
+    - name: Execute monitoring script
+      command: python3 /home/ubuntu/monitor.py
+      register: monitor_output
+
+    - name: Save output locally
+      delegate_to: localhost
+      copy:
+        content: "{{ monitor_output.stdout }}"
+        dest: "output/{{ inventory_hostname }}.json"
+
+❌ YAML ERROR FACED
+conflicting action statements: apt, state
+
+🔍 ROOT CAUSE
+
+Incorrect indentation → multiple modules in one task
+
+✅ FIX
+
+Ensure state is inside apt
+
+🧠 Interview lesson
+
+One Ansible task = one module.
+
+▶️ STEP 7️⃣ — Run the Playbook
+mkdir -p output
+ansible-playbook -i inventory.ini playbook.yml
+
+📊 STEP 8️⃣ — Verify Output
+ls output/
+cat output/server1.json
+
+
+Example:
+
+{
+  "host": "ip-172-31-40-98",
+  "timestamp": "2026-02-11T16:20:00",
+  "cpu_percent": 12.8,
+  "memory_percent": 46.9,
+  "disk_percent": 22.3
+}
+
+🧠 What This Project Proves
+
+SSH troubleshooting
+
+Ansible orchestration
+
+Python OS constraints awareness
+
+Production-safe automation
+
+Debugging mindset
+
+📄 Resume Bullet (Use This)
+
+Built an Ansible-orchestrated Python monitoring system to collect infrastructure metrics across EC2 instances, resolving SSH authentication issues, OS-managed Python constraints (PEP 668), and YAML orchestration errors using production best practices.
+
+🧑‍💼 Interview Answer You Can Say
+
+“This project reflects how I work in production: I validate SSH first, respect OS Python policies, use structured outputs, and debug failures systematically instead of applying unsafe workarounds.”
