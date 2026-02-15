@@ -1,0 +1,275 @@
+1️⃣ What does service mean?
+
+Look at this function:
+
+def get_connection(self, service):
+    return boto3.client(service)
+
+🔹 What is service?
+
+👉 service is just a variable name
+👉 It is NOT a Python keyword
+👉 It is NOT special
+
+It simply holds a string value like:
+
+"s3"
+"ec2"
+"iam"
+"lambda"
+
+Why is it called service?
+
+Because AWS calls its products services:
+
+S3 → storage service
+
+EC2 → compute service
+
+IAM → identity service
+
+So when you write:
+
+self.get_connection("s3")
+
+
+Python does this:
+
+service = "s3"
+
+
+Then:
+
+boto3.client("s3")
+
+
+creates an S3 client
+
+🔹 You could rename service to ANYTHING
+
+These all work the same:
+
+def get_connection(self, x):
+def get_connection(self, name):
+def get_connection(self, aws_service):
+
+
+Python does not care about the name
+Only humans care for readability
+
+2️⃣ What is self? (MOST IMPORTANT)
+This is the #1 confusion topic in Python classes
+
+Let’s break it VERY slowly.
+
+🔹 What is self in simple words?
+
+👉 self means "this current object"
+
+Example:
+
+aws = AWSUtils()
+
+
+aws is an object
+
+self inside the class refers to this object
+
+So:
+
+self == aws
+
+
+inside the class
+
+🔹 Why do we need self?
+
+Because each object must have its own data
+
+Look at this:
+
+self.s3 = boto3.client("s3")
+
+
+This means:
+
+“Attach s3 client to THIS object”
+
+Without self, Python would forget the value after function ends
+
+🔹 What happens if you DON'T use self?
+def __init__(self):
+    s3 = boto3.client("s3")   # ❌
+
+
+❌ s3 exists only inside __init__
+❌ You cannot use it in other methods
+
+✅ With self
+self.s3 = boto3.client("s3")
+
+
+✔ Stored inside object
+✔ Accessible everywhere:
+
+self.s3.list_buckets()
+
+3️⃣ Why do we write self in every method?
+
+Look:
+
+def show_buckets(self):
+
+
+Why not:
+
+def show_buckets():
+
+
+Because Python automatically passes the object as first argument.
+
+When you call:
+
+aws.show_buckets()
+
+
+Python actually does:
+
+AWSUtils.show_buckets(aws)
+
+
+So:
+
+self = aws
+
+4️⃣ Why self.get_connection("s3")?
+self.s3 = self.get_connection("s3")
+
+
+Let’s break this into steps:
+
+Step 1
+self.get_connection("s3")
+
+
+means:
+
+AWSUtils.get_connection(self, "s3")
+
+Step 2
+
+Inside method:
+
+service = "s3"
+
+Step 3
+boto3.client("s3")
+
+
+Creates S3 connection
+
+Step 4
+
+Returned value stored as:
+
+self.s3
+
+5️⃣ What is actually happening in memory?
+When you write:
+aws = AWSUtils()
+
+
+Memory looks like:
+
+aws
+ ├── s3  → S3 client object
+ ├── ec2 → EC2 client object
+
+6️⃣ What is a method?
+def show_buckets(self):
+
+
+This is a method, not a function.
+
+Difference:
+Function	Method
+print()	aws.show_buckets()
+Independent	Belongs to object
+7️⃣ What does this line do EXACTLY?
+response = self.s3.list_buckets()
+
+
+Breakdown:
+
+self.s3 → S3 client
+
+.list_buckets() → AWS API call
+
+AWS returns JSON
+
+Stored in response
+
+response is a dictionary
+
+8️⃣ What is a dictionary? (Quick)
+{
+  "Buckets": [
+      {"Name": "bucket1"},
+      {"Name": "bucket2"}
+  ]
+}
+
+
+Access:
+
+response["Buckets"]
+
+9️⃣ What does for bucket in response["Buckets"] mean?
+
+response["Buckets"] → list
+
+bucket → one item at a time
+
+Each item is a dictionary
+
+🔟 Why if __name__ == "__main__"?
+
+This means:
+
+“Run this code ONLY if file is executed directly”
+
+Not when imported.
+
+🧠 SUPER IMPORTANT SUMMARY
+service
+
+Just a variable
+
+Holds AWS service name as string
+
+self
+
+Refers to current object
+
+Required to store & access data across methods
+
+Without self
+
+Data is lost
+
+Methods can’t share values
+
+With self
+
+Object remembers everything
+
+🔥 REAL-LIFE ANALOGY
+Class = Blueprint
+Object = Actual Machine
+self = That machine itself
+self.s3
+
+
+means:
+
+“S3 connection of THIS machine”
