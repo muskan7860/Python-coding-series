@@ -1,0 +1,246 @@
+🚀 DevOps Control Center
+Real-Time Infrastructure Monitoring with AWS Integration
+📌 Project Overview
+
+DevOps Control Center is a production-style infrastructure monitoring dashboard built using:
+
+Python (Flask)
+
+Docker
+
+Linux System Metrics
+
+AWS CloudWatch
+
+AWS S3
+
+This project monitors:
+
+✅ CPU Usage
+
+✅ Memory Usage
+
+✅ Disk Usage
+
+✅ AWS S3 Bucket Info
+
+✅ CloudWatch Metrics (EC2)
+
+Unlike demo dashboards that show static or fake values, this application fetches live system data and integrates with AWS services to simulate real-world DevOps monitoring workflows.
+
+🏗️ Architecture
+Frontend (HTML Dashboard)
+        ↓
+Flask Backend (app.py)
+        ↓
+System Metrics Layer (psutil)
+        ↓
+AWS SDK (boto3)
+        ↓
+CloudWatch + S3
+
+🛠️ Tech Stack
+
+Python 3.10+
+
+Flask
+
+psutil
+
+boto3
+
+Docker
+
+AWS IAM
+
+CloudWatch
+
+S3
+
+📂 Project Structure
+devops-control-center/
+│
+├── app.py
+├── requirements.txt
+├── Dockerfile
+├── templates/
+│     └── index.html
+└── README.md
+
+🧠 Metric Collection Logic
+
+We use psutil for system metrics instead of parsing shell commands (production-safe method).
+
+CPU
+psutil.cpu_percent(interval=1)
+
+Memory
+psutil.virtual_memory().percent
+
+Disk
+psutil.disk_usage('/').percent
+
+🐍 app.py
+from flask import Flask, render_template, jsonify
+import psutil
+import boto3
+from botocore.exceptions import NoCredentialsError
+
+app = Flask(__name__)
+
+# AWS Clients
+try:
+    s3 = boto3.client('s3')
+    cloudwatch = boto3.client('cloudwatch')
+except NoCredentialsError:
+    s3 = None
+    cloudwatch = None
+
+
+def get_status(value, warning, critical):
+    if value >= critical:
+        return "red"
+    elif value >= warning:
+        return "orange"
+    else:
+        return "green"
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/metrics")
+def metrics():
+    cpu = psutil.cpu_percent(interval=1)
+    memory = psutil.virtual_memory().percent
+    disk = psutil.disk_usage('/').percent
+
+    cpu_status = get_status(cpu, 60, 80)
+    memory_status = get_status(memory, 70, 85)
+    disk_status = get_status(disk, 70, 90)
+
+    # S3 Buckets
+    try:
+        buckets = s3.list_buckets()["Buckets"] if s3 else []
+    except Exception:
+        buckets = []
+
+    return jsonify({
+        "cpu": cpu,
+        "memory": memory,
+        "disk": disk,
+        "cpu_status": cpu_status,
+        "memory_status": memory_status,
+        "disk_status": disk_status,
+        "s3_buckets": [b["Name"] for b in buckets]
+    })
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+📦 requirements.txt
+Flask==2.3.2
+psutil==5.9.5
+boto3==1.28.0
+
+🐳 Dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]
+
+🔧 LOCAL SETUP (Step-by-Step)
+1️⃣ Clone Repo
+git clone <your-repo-url>
+cd devops-control-center
+
+2️⃣ Create Virtual Environment
+python3 -m venv venv
+source venv/bin/activate
+
+3️⃣ Install Dependencies
+pip install -r requirements.txt
+
+4️⃣ Configure AWS Credentials
+aws configure
+
+
+Provide:
+
+Access Key
+
+Secret Key
+
+Region
+
+5️⃣ Run Application
+python app.py
+
+
+Access:
+
+http://localhost:5000
+
+🐳 DOCKER DEPLOYMENT
+Build Image
+docker build -t devops-control-center .
+
+Run Container
+docker run -p 5000:5000 \
+-e AWS_ACCESS_KEY_ID=your_key \
+-e AWS_SECRET_ACCESS_KEY=your_secret \
+-e AWS_DEFAULT_REGION=your_region \
+devops-control-center
+
+🚨 Errors Faced & How We Fixed Them
+❌ 1. CPU Showing 0%
+
+Cause: Using incorrect shell parsing.
+
+Fix: Switched to psutil.cpu_percent(interval=1).
+
+❌ 2. AWS Credentials Error
+
+Error:
+
+Unable to locate credentials
+
+
+Fix:
+
+Configured aws configure
+
+Passed environment variables inside Docker
+
+❌ 3. Docker Build Failure (pip cache issue)
+
+Fix:
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+❌ 4. S3 Access Denied
+
+Cause: IAM policy missing s3:ListBucket
+
+Fix:
+Attached policy:
+
+AmazonS3ReadOnlyAccess
+
+❌ 5. CloudWatch Permission Error
+
+Fix:
+Attached:
+
+CloudWatchReadOnlyAccess
