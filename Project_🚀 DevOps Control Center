@@ -1,0 +1,286 @@
+🚀 DevOps Control Center
+
+A lightweight web-based dashboard to monitor AWS services like:
+
+✅ CloudWatch Alarm Status
+
+✅ S3 Bucket Connectivity
+
+✅ EC2 Instance Health
+
+✅ Basic DevOps Monitoring
+
+Built using:
+
+Python (Flask)
+
+Boto3 (AWS SDK)
+
+HTML/CSS
+
+AWS EC2
+
+📌 Project Overview
+
+This project demonstrates:
+
+AWS IAM Role usage
+
+EC2 deployment
+
+CloudWatch integration
+
+S3 connectivity checks
+
+Environment variable handling
+
+Production troubleshooting
+
+This is designed for DevOps beginners to understand real-world AWS integration.
+
+🏗 Architecture
+User Browser
+     ↓
+EC2 Instance (Ubuntu)
+     ↓
+Flask Application
+     ↓
+AWS Services
+   ├── CloudWatch
+   ├── S3
+   └── EC2 Metadata
+
+📂 Project Structure
+devops-control-center/
+│
+├── app.py
+├── requirements.txt
+├── templates/
+│     └── index.html
+├── static/
+│     └── style.css
+├── .env
+└── README.md
+
+⚙️ Prerequisites
+
+Before starting, you need:
+
+AWS Account
+
+EC2 Instance (Ubuntu 22.04 recommended)
+
+IAM Role
+
+Python 3.10+
+
+Git
+
+🔐 Step 1: Create IAM Role for EC2
+
+Go to:
+
+AWS Console → IAM → Roles → Create Role
+
+Attach policies:
+
+AmazonS3ReadOnlyAccess
+
+CloudWatchReadOnlyAccess
+
+Attach this role to your EC2 instance.
+
+🖥 Step 2: Launch EC2
+
+Ubuntu 22.04
+
+Allow inbound:
+
+Port 22 (SSH)
+
+Port 5000 (App)
+
+Attach IAM Role
+
+🔧 Step 3: Connect to EC2
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+🛠 Step 4: Install Dependencies
+sudo apt update
+sudo apt install python3-pip python3-venv -y
+
+🐍 Step 5: Create Virtual Environment
+mkdir devops-control-center
+cd devops-control-center
+
+python3 -m venv venv
+source venv/bin/activate
+
+📦 Step 6: Create requirements.txt
+
+Create file:
+
+nano requirements.txt
+
+
+Add:
+
+flask
+boto3
+python-dotenv
+
+
+Install:
+
+pip install -r requirements.txt
+
+📄 Step 7: Create app.py
+
+Create file:
+
+nano app.py
+
+
+Basic structure:
+
+from flask import Flask, render_template
+import boto3
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    cloudwatch_status = "OK"
+    s3_status = "OK"
+
+    try:
+        cw = boto3.client("cloudwatch")
+        cw.describe_alarms()
+    except Exception:
+        cloudwatch_status = "Error"
+
+    try:
+        s3 = boto3.client("s3")
+        s3.list_buckets()
+    except Exception:
+        s3_status = "Error"
+
+    return render_template("index.html",
+                           cloudwatch_status=cloudwatch_status,
+                           s3_status=s3_status)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+📁 Step 8: Create templates folder
+mkdir templates
+nano templates/index.html
+
+
+Basic HTML:
+
+<h1>DevOps Control Center</h1>
+<p>CloudWatch Alarm: {{ cloudwatch_status }}</p>
+<p>S3 Status: {{ s3_status }}</p>
+
+▶️ Step 9: Run Application
+python app.py
+
+
+Open in browser:
+
+http://<EC2-PUBLIC-IP>:5000
+
+🌍 Environment Variables (.env)
+
+If not using IAM role, create:
+
+nano .env
+
+
+Add:
+
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_DEFAULT_REGION=ap-south-1
+
+
+Load using:
+
+from dotenv import load_dotenv
+load_dotenv()
+
+
+⚠️ Never push .env to GitHub. Add to .gitignore.
+
+❗ Errors You Faced & Fix
+1️⃣ CloudWatch Error
+
+Cause:
+
+No IAM role
+
+Wrong region
+
+No permissions
+
+Fix:
+
+Attach correct IAM role
+
+Check region:
+
+echo $AWS_DEFAULT_REGION
+
+
+Test:
+
+aws sts get-caller-identity
+
+
+If this fails → IAM issue.
+
+2️⃣ S3 Error
+
+Cause:
+
+No S3 permissions
+
+Wrong bucket
+
+AWS not configured
+
+Test:
+
+aws s3 ls
+
+
+If AccessDenied → IAM policy missing.
+
+3️⃣ Access Denied in Browser
+
+Cause:
+
+Port 5000 not open
+
+Fix:
+
+Edit EC2 Security Group
+
+Allow inbound TCP 5000
+
+4️⃣ Public IP Changes
+
+Use Elastic IP to make permanent.
+
+🔒 Production Deployment (Recommended)
+
+Instead of Flask default server:
+
+Use:
+
+Gunicorn
+
+Nginx
+
+HTTPS (Let’s Encrypt)
