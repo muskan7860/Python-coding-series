@@ -1,0 +1,182 @@
+🥇 PROJECT 1 (FINAL, PRODUCTION-READY VERSION)
+EC2 Cost Optimization Automation
+✅ What We ADD (Only Necessary Things)
+
+Central logging
+
+Try/except with AWS errors
+
+Pagination
+
+Safe failure behavior
+
+📁 Final Structure (Industry Standard)
+aws-ec2-cost-optimizer/
+├── main.py
+├── ec2_service.py
+├── config.py
+├── logger.py
+├── requirements.txt
+└── report/
+    └── stopped_instances.json
+📌 logger.py
+import logging
+
+def setup_logger():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s"
+    )
+    return logging.getLogger()
+📌 config.py
+import os
+
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+STOPPED_DAYS_THRESHOLD = int(os.getenv("STOPPED_DAYS_THRESHOLD", 7))
+📌 ec2_service.py (PRODUCTION-GRADE)
+import boto3
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
+from config import AWS_REGION, STOPPED_DAYS_THRESHOLD
+from logger import setup_logger
+
+logger = setup_logger()
+ec2 = boto3.client("ec2", region_name=AWS_REGION)
+
+def get_stopped_instances():
+    stopped_instances = []
+
+    try:
+        paginator = ec2.get_paginator("describe_instances")
+        pages = paginator.paginate(
+            Filters=[{"Name": "instance-state-name", "Values": ["stopped"]}]
+        )
+
+        for page in pages:
+            for reservation in page["Reservations"]:
+                for instance in reservation["Instances"]:
+                    launch_time = instance["LaunchTime"]
+                    days_stopped = (datetime.now(timezone.utc) - launch_time).days
+
+                    if days_stopped >= STOPPED_DAYS_THRESHOLD:
+                        stopped_instances.append({
+                            "InstanceId": instance["InstanceId"],
+                            "InstanceType": instance["InstanceType"],
+                            "DaysStopped": days_stopped
+                        })
+
+        logger.info("Fetched stopped EC2 instances successfully")
+
+    except ClientError as e:
+        logger.error(f"AWS error while fetching EC2 data: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+
+    return stopped_instances
+📌 main.py
+import json
+from ec2_service import get_stopped_instances
+from logger import setup_logger
+
+logger = setup_logger()
+
+def generate_report():
+    instances = get_stopped_instances()
+
+    with open("report/stopped_instances.json", "w") as f:
+        json.dump(instances, f, indent=4)
+
+    logger.info(f"Report generated with {len(instances)} instances")
+
+if __name__ == "__main__":
+    generate_report()
+📌 requirements.txt
+boto3
+✅ THIS IS NOW PRODUCTION-READY
+
+✔ Logs
+✔ Exception handling
+✔ Pagination
+✔ Safe execution
+✔ Resume-ready
+
+🥈 PROJECT 2 (FINAL, PRODUCTION-READY)
+Infrastructure Health Monitoring API
+What We ADD
+
+Logging
+
+Error handling
+
+Clean separation
+
+FastAPI best practices
+
+📁 Structure
+infra-health-api/
+├── main.py
+├── aws_metrics.py
+├── system_metrics.py
+├── logger.py
+├── requirements.txt
+📌 logger.py
+import logging
+
+def get_logger():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s"
+    )
+    return logging.getLogger()
+📌 system_metrics.py
+import psutil
+
+def get_system_metrics():
+    return {
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_percent": psutil.virtual_memory().percent,
+        "disk_percent": psutil.disk_usage("/").percent
+    }
+📌 aws_metrics.py
+import boto3
+from botocore.exceptions import ClientError
+from logger import get_logger
+
+logger = get_logger()
+ec2 = boto3.client("ec2")
+
+def ec2_health():
+    try:
+        response = ec2.describe_instance_status(IncludeAllInstances=True)
+        return [
+            {
+                "InstanceId": i["InstanceId"],
+                "State": i["InstanceState"]["Name"]
+            }
+            for i in response["InstanceStatuses"]
+        ]
+    except ClientError as e:
+        logger.error(f"AWS EC2 error: {e}")
+        return []
+📌 main.py
+from fastapi import FastAPI, HTTPException
+from system_metrics import get_system_metrics
+from aws_metrics import ec2_health
+
+app = FastAPI(title="Infra Health API")
+
+@app.get("/health/system")
+def system_health():
+    return get_system_metrics()
+
+@app.get("/health/ec2")
+def ec2_status():
+    data = ec2_health()
+    if not data:
+        raise HTTPException(status_code=500, detail="EC2 data unavailable")
+    return data
+📌 requirements.txt
+fastapi
+uvicorn
+boto3
+psutil
